@@ -14,13 +14,14 @@ import androidx.room.PrimaryKey
 
     val authorId: String? = null,
     val authorName: String? = null,
-    val ingredients: String? = null,
+    val ingredientsText: String? = null,
 
     //на 100 грам
     val calories: Double = 0.0,
     val proteins: Double = 0.0,
     val fats: Double = 0.0,
     val carbs: Double = 0.0,
+    val weight: Double = 0.0,
 
     val isFavorite: Boolean = false,
     val isPreloaded: Boolean = false
