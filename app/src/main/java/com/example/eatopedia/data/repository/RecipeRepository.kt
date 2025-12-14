@@ -4,6 +4,7 @@ import android.util.Log
 
 import com.example.eatopedia.data.local.LocalRecipeDao
 import com.example.eatopedia.data.local.LocalRecipeEntity
+import com.example.eatopedia.data.local.PreloadedRecipes
 import com.example.eatopedia.data.mapper.toEntity
 import com.example.eatopedia.data.mapper.toDto
 import com.example.eatopedia.data.remote.RecipeDto
@@ -270,7 +271,24 @@ class RecipeRepository( private val recipeDao: LocalRecipeDao)
         }
     }
 
+    //Завантажує дефолтні рецепти з файлу PreloadedRecipes у локальну базу.
+    suspend fun loadDefaultRecipes(): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
+            // 1. Отримуємо список рецептів з нашого об'єкта
+            val defaultRecipes = PreloadedRecipes.defaultRecipes
 
+            Log.d(TAG, "Starting preload of ${defaultRecipes.size} recipes...")
+
+            // 2. Проходимось по списку і вставляємо в Room
+            defaultRecipes.forEach { recipe -> recipeDao.insertRecipe(recipe) }
+
+            Log.d(TAG, "Successfully preloaded ${defaultRecipes.size} recipes")
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to load default recipes", e)
+            Result.failure(e)
+        }
+    }
 
 
 
@@ -372,4 +390,6 @@ class RecipeRepository( private val recipeDao: LocalRecipeDao)
             Result.failure(e)
         }
     }
+
+
 }

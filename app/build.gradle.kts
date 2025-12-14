@@ -17,6 +17,8 @@ plugins {
     alias(libs.plugins.google.devtools.ksp)//додаємо ksp вже до всьої проги
     alias(libs.plugins.kotlin.serialization)
     id("org.jetbrains.kotlin.plugin.compose") version "2.2.10"
+    alias(libs.plugins.kotlin.kapt)
+    alias(libs.plugins.hilt)
 }
 
 android {
@@ -112,6 +114,10 @@ dependencies {
     // --- KOTLINX (Дані та Потоки) ---
     implementation(libs.kotlinx.serialization.json) // Щоб перетворювати DTO в JSON.
     implementation(libs.kotlinx.coroutines.android) // Щоб оновлювати екран
+
+    implementation(libs.hilt.android)
+    kapt(libs.hilt.compiler)
+    implementation(libs.androidx.hilt.navigation.compose)
 
 
 
