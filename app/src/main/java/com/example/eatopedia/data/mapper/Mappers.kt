@@ -30,6 +30,7 @@ fun RecipeDto.toEntity(
         proteins = this.totalProteins / coef,
         fats = this.totalFats / coef,
         carbs = this.totalCarbs / coef,
+        weight = this.totalWeight / coef,
         isFavorite = isFavorite,
         isPreloaded = isPreloaded
 
@@ -51,7 +52,7 @@ fun LocalRecipeEntity.toDto(): RecipeDto {
         totalProteins = this.proteins,
         totalFats = this.fats,
         totalCarbs = this.carbs,
-        totalWeight = this.weight // ← тут також ставимо this
+        totalWeight = this.weight
     )
 }
 

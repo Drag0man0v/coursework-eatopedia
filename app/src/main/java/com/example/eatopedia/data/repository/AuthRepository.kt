@@ -11,6 +11,7 @@ import io.github.jan.supabase.postgrest.from //функція для робот�
 import kotlinx.coroutines.Dispatchers //вказує, на якому потоці виконувати корутини
 import kotlinx.coroutines.withContext //функція корутин, яка дозволяє змінити контекст виконання (потік) на певний диспатчер
 import java.lang.Exception
+import java.time.Instant
 
 class AuthRepository {
     private val supabase = SupabaseClient.client
@@ -47,7 +48,7 @@ class AuthRepository {
                     username = username.trim(),
                     bio = null,
                     avatarUrl = null,
-                    createdAt = null)
+                    createdAt = Instant.now().toString() )
             supabase.from("profiles").insert(profile)
             Log.d(TAG, "User registered: $email")
 

@@ -98,16 +98,14 @@ class AuthViewModel @Inject constructor(
             )
 
             result.onSuccess {
-                _message.value = "Реєстрація успішна!"
+                _message.value = "Лист надіслано! Підтвердіть пошту перед входом."
 
-                // Завантажуємо дефолтні рецепти для нового користувача
-                recipeRepository.loadDefaultRecipes()
+                // Перемикаємо на екран входу, щоб він міг залогінитись після кліку в листі
+                _isSignUpMode.value = false
 
-                _isAuthenticated.value = true
             }.onFailure { error ->
                 _message.value = error.message ?: "Помилка реєстрації"
             }
-
             _isLoading.value = false
         }
     }
