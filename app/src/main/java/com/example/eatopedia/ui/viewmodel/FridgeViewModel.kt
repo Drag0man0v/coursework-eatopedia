@@ -18,9 +18,7 @@ class FridgeViewModel @Inject constructor(
     private val recipeRepository: RecipeRepository
 ) : ViewModel() {
 
-    // ==========================================
-    // STATE
-    // ==========================================
+
     // Список продуктів у холодильнику
     val fridgeItems: StateFlow<List<FridgeItemEntity>> = fridgeRepository
         .getMyFridgeItems()
@@ -62,10 +60,6 @@ class FridgeViewModel @Inject constructor(
     // Повідомлення
     private val _message = MutableStateFlow<String?>(null)
     val message: StateFlow<String?> = _message.asStateFlow()
-
-    // ==========================================
-    // ACTIONS - Керування продуктами
-    // ==========================================
 
     // Відкрити діалог додавання
     fun openAddDialog() {
@@ -135,11 +129,8 @@ class FridgeViewModel @Inject constructor(
         }
     }
 
-    // ==========================================
-    // ACTIONS - Пошук рецептів
-    // ==========================================
 
-    // Кнопка "Що приготувати?" - шукає рецепти за всіма продуктами
+
     fun searchRecipesByFridge() {
         val items = fridgeItems.value
 
@@ -151,15 +142,42 @@ class FridgeViewModel @Inject constructor(
         viewModelScope.launch {
             _isSearching.value = true
             _showSearchResults.value = true
+            _foundRecipes.value = emptyList() // Очищаємо старі результати
 
-            val ingredients = items.map { it.name }
+            val ingredients = items.map { it.name.lowercase().trim() }
 
-            // Шукаємо локально + віддалено
-            recipeRepository.searchByIngredient(ingredients).collect { recipes ->
-                _foundRecipes.value = recipes
+            try {
+                // Отримуємо ВСІ локальні рецепти
+                recipeRepository.getAllRecipes().first().let { allRecipes ->
+
+                    // Фільтруємо рецепти: шукаємо ті, що містять хоча б один інгредієнт
+                    val matchingRecipes = allRecipes.filter { recipe ->
+                        val recipeIngredients = recipe.ingredientsText
+                            ?.lowercase()
+                            ?.split(",")
+                            ?.map { it.trim() }
+                            ?: emptyList()
+
+                        // Перевіряємо, чи є хоча б один збіг
+                        ingredients.any { fridgeIngredient ->
+                            recipeIngredients.any { recipeIngredient ->
+                                recipeIngredient.contains(fridgeIngredient) ||
+                                        fridgeIngredient.contains(recipeIngredient)
+                            }
+                        }
+                    }
+
+                    _foundRecipes.value = matchingRecipes
+
+                    if (matchingRecipes.isEmpty()) {
+                        _message.value = "Рецептів не знайдено. Спробуйте додати більше продуктів."
+                    }
+                }
+            } catch (e: Exception) {
+                _message.value = "Помилка пошуку: ${e.message}"
+            } finally {
+                _isSearching.value = false
             }
-
-            _isSearching.value = false
         }
     }
 

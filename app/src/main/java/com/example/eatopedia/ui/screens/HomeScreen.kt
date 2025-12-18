@@ -1,19 +1,29 @@
 package com.example.eatopedia.ui.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.colorResource
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.example.eatopedia.R
@@ -27,62 +37,138 @@ fun HomeScreen(
 ) {
     val filteredRecipes by viewModel.filteredRecipes.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
-    val isRefreshing by viewModel.isRefreshing.collectAsState()
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        // Top Bar з пошуком
-        TopAppBar(
-            title = { Text("Eatopedia", fontWeight = FontWeight.Bold) },
-            colors = TopAppBarDefaults.topAppBarColors(
-                containerColor = colorResource(id = R.color.splash_background)
-            )
-        )
+    var showBottomSheet by remember { mutableStateOf(false) }
+    var selectedRecipeId by remember { mutableStateOf<String?>(null) }
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
-        // Пошукове поле
-        OutlinedTextField(
-            value = searchQuery,
-            onValueChange = { viewModel.onSearchQueryChanged(it) },
+    Scaffold(
+        containerColor = MaterialTheme.colorScheme.background
+    ) { paddingValues ->
+
+        Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            placeholder = { Text("Шукати рецепти або авторів...") },
-            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-            singleLine = true
-        )
+                .fillMaxSize()
+                .padding(paddingValues)
+                .padding(horizontal = 16.dp)
+        ) {
+            Spacer(modifier = Modifier.height(16.dp))
 
-        // Список рецептів
-        if (filteredRecipes.isEmpty()) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Text("Рецептів не знайдено")
+            SearchBarCustom(
+                query = searchQuery,
+                onQueryChanged = { viewModel.onSearchQueryChanged(it) }
+            )
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            if (searchQuery.isNotEmpty()) {
+                Text(
+                    text = "Результати пошуку",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold
+                )
             }
-        } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                items(filteredRecipes) { recipe ->
-                    RecipeCard(
-                        title = recipe.title,
-                        authorName = recipe.authorName ?: "Невідомий автор",
-                        imageUrl = recipe.imageUrl,
-                        isFavorite = recipe.isFavorite,
-                        onClick = { onRecipeClick(recipe.id) },
-                        onFavoriteClick = {
-                            viewModel.toggleFavorite(recipe.id, !recipe.isFavorite)
-                        }
-                    )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            if (filteredRecipes.isEmpty()) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "🍽️",
+                            fontSize = 80.sp
+                        )
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        Text(
+                            text = "Рецептів не знайдено",
+                            color = Color.Gray,
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                        )
+                    }
                 }
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.spacedBy(20.dp),
+                    contentPadding = PaddingValues(bottom = 80.dp)
+                ) {
+                    items(filteredRecipes) { recipe ->
+                        RecipeCardPretty(
+                            title = recipe.title,
+                            authorName = recipe.authorName ?: "Шеф-кухар",
+                            imageUrl = recipe.imageUrl,
+                            isFavorite = recipe.isFavorite,
+                            onClick = {
+                                selectedRecipeId = recipe.id
+                                showBottomSheet = true
+                            },
+                            onFavoriteClick = {
+                                viewModel.toggleFavorite(recipe.id, !recipe.isFavorite)
+                            }
+                        )
+                    }
+                }
+            }
+        }
+
+        if (showBottomSheet && selectedRecipeId != null) {
+            ModalBottomSheet(
+                onDismissRequest = {
+                    showBottomSheet = false
+                    selectedRecipeId = null
+                },
+                sheetState = sheetState,
+                containerColor = MaterialTheme.colorScheme.surface,
+                tonalElevation = 8.dp
+            ) {
+                RecipeDetailContent(recipeId = selectedRecipeId!!)
             }
         }
     }
 }
 
+
 @Composable
-fun RecipeCard(
+fun SearchBarCustom(
+    query: String,
+    onQueryChanged: (String) -> Unit
+) {
+    OutlinedTextField(
+        value = query,
+        onValueChange = onQueryChanged,
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(56.dp),
+        placeholder = { Text("") },
+        leadingIcon = {
+            Icon(
+                imageVector = Icons.Default.Search,
+                contentDescription = "Search",
+                tint = Color.Gray
+            )
+        },
+        shape = RoundedCornerShape(16.dp),
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedBorderColor = colorResource(id = R.color.eatopedia_dark),
+            unfocusedBorderColor = Color.LightGray,
+            focusedContainerColor = MaterialTheme.colorScheme.surface,
+            unfocusedContainerColor = MaterialTheme.colorScheme.surface
+        ),
+        singleLine = true
+    )
+}
+
+
+@Composable
+fun RecipeCardPretty(
     title: String,
     authorName: String,
     imageUrl: String?,
@@ -90,44 +176,72 @@ fun RecipeCard(
     onClick: () -> Unit,
     onFavoriteClick: () -> Unit
 ) {
+    val imageModel = if (imageUrl.isNullOrEmpty()) {
+        R.drawable.default_img
+    } else {
+        imageUrl
+    }
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
-        elevation = CardDefaults.cardElevation(4.dp)
+        shape = RoundedCornerShape(20.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
-        Row(modifier = Modifier.padding(12.dp)) {
-            // Картинка
-            AsyncImage(
-                model = imageUrl,
-                contentDescription = title,
-                modifier = Modifier.size(80.dp),
-                contentScale = ContentScale.Crop
-            )
-
-            Spacer(modifier = Modifier.width(12.dp))
-
-            // Текст
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
+        Column {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(200.dp)
+            ) {
+                AsyncImage(
+                    model = imageModel,
+                    contentDescription = title,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
                 )
-                Text(
-                    text = "Автор: $authorName",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+
+                IconButton(
+                    onClick = onFavoriteClick,
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(8.dp)
+                        .background(
+                            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.7f),
+                            shape = CircleShape
+                        )
+                ) {
+                    Icon(
+                        imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                        contentDescription = "Like",
+                        tint = if (isFavorite) Color.Red else Color.Gray
+                    )
+                }
             }
 
-            // Іконка серця
-            IconButton(onClick = onFavoriteClick) {
-                Icon(
-                    imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                    contentDescription = "Улюблене",
-                    tint = if (isFavorite) colorResource(id = R.color.eatopedia_dark) else MaterialTheme.colorScheme.onSurfaceVariant
+            Column(
+                modifier = Modifier.padding(16.dp)
+            ) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
                 )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "Автор: $authorName",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.weight(1f))
+                }
             }
         }
     }

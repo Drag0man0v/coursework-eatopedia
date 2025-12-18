@@ -8,6 +8,7 @@ import com.example.eatopedia.data.local.PreloadedRecipes
 import com.example.eatopedia.data.mapper.toEntity
 import com.example.eatopedia.data.mapper.toDto
 import com.example.eatopedia.data.remote.RecipeDto
+import com.example.eatopedia.data.remote.RecipeIngredientDto
 import com.example.eatopedia.data.remote.SupabaseClient
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.query.Columns//шоб отримувати певні колонки
@@ -24,8 +25,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 
-class RecipeRepository( private val recipeDao: LocalRecipeDao)
-{
+class RecipeRepository( private val recipeDao: LocalRecipeDao) {
     private val supabase = SupabaseClient.client
     private val TAG = "RecipeRepository"
 
@@ -51,80 +51,146 @@ class RecipeRepository( private val recipeDao: LocalRecipeDao)
     }
 
     //Отримати рецепт за ID
-    suspend fun getRecipeById(recipeId: String): Result<LocalRecipeEntity> = withContext(Dispatchers.IO) {
-        try {
-            // Спочатку перевіряємо локально
-            val localRecipe = recipeDao.getRecipeById(recipeId)
+    suspend fun getRecipeById(recipeId: String): Result<LocalRecipeEntity> =
+        withContext(Dispatchers.IO) {
+            try {
+                // Спочатку перевіряємо локально
+                val localRecipe = recipeDao.getRecipeById(recipeId)
 
-            if (localRecipe != null) {
-                // Якщо знайшли локально - оновлюємо з Supabase у фоні
-                try {
+                if (localRecipe != null) {
+                    // Якщо знайшли локально - оновлюємо з Supabase у фоні
+                    try {
+                        val remoteRecipe = supabase.from("recipes")
+                            .select(columns = Columns.list("*")) {
+                                filter { eq("id", recipeId) }
+                            }.decodeSingle<RecipeDto>()
+
+                        // Використовуємо mapper
+                        val updatedEntity = remoteRecipe.toEntity(
+                            isFavorite = localRecipe.isFavorite,
+                            isPreloaded = localRecipe.isPreloaded
+                        )
+                        recipeDao.insertRecipe(updatedEntity)
+
+                        Result.success(updatedEntity)
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Remote fetch failed, returning local", e)
+                        Result.success(localRecipe)
+                    }
+                } else {
+                    // Якщо немає локально - завантажуємо з Supabase
                     val remoteRecipe = supabase.from("recipes")
                         .select(columns = Columns.list("*")) {
                             filter { eq("id", recipeId) }
                         }.decodeSingle<RecipeDto>()
 
-                    // Використовуємо mapper
-                    val updatedEntity = remoteRecipe.toEntity(
-                        isFavorite = localRecipe.isFavorite,
-                        isPreloaded = localRecipe.isPreloaded
-                    )
-                    recipeDao.insertRecipe(updatedEntity)
+                    val entity = remoteRecipe.toEntity()
+                    recipeDao.insertRecipe(entity)
 
-                    Result.success(updatedEntity)
-                } catch (e: Exception) {
-                    Log.e(TAG, "Remote fetch failed, returning local", e)
-                    Result.success(localRecipe)
+                    Result.success(entity)
                 }
-            } else {
-                // Якщо немає локально - завантажуємо з Supabase
-                val remoteRecipe = supabase.from("recipes")
-                    .select(columns = Columns.list("*")) {
-                        filter { eq("id", recipeId) }
-                    }.decodeSingle<RecipeDto>()
-
-                val entity = remoteRecipe.toEntity()
-                recipeDao.insertRecipe(entity)
-
-                Result.success(entity)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error getting recipe by ID: $recipeId", e)
+                Result.failure(e)
             }
-        } catch (e: Exception) {
-            Log.e(TAG, "Error getting recipe by ID: $recipeId", e)
-            Result.failure(e)
+        }
+
+
+    @Serializable
+    data class IngredientNameDto(val id: String, val name: String)
+    fun searchRecipesByFridge(userIngredients: List<String>): Flow<List<LocalRecipeEntity>> {
+        // Якщо інгредієнтів немає - повертаємо пустий список
+        if (userIngredients.isEmpty()) return flow { emit(emptyList()) }
+
+        return recipeDao.getAllRecieps().map { allRecipes ->
+            // Фільтруємо локальні рецепти (перевіряємо чи є інгредієнт в тексті)
+            allRecipes.filter { recipe ->
+                val text = recipe.ingredientsText?.lowercase() ?: ""
+                userIngredients.any { ing -> text.contains(ing.trim().lowercase()) }
+            }
+                // Сортуємо: рецепти з найбільшою кількістю збігів зверху
+                .sortedByDescending { recipe ->
+                    val text = recipe.ingredientsText?.lowercase() ?: ""
+                    userIngredients.count { text.contains(it.trim().lowercase()) }
+                }
+        }.onStart {
+            // 2. ЦЕЙ БЛОК ЗАПУСКАЄТЬСЯ ПАРАЛЕЛЬНО (Background Sync)
+            // Ми не чекаємо його виконання, щоб показати дані.
+            // Якщо інтернет є і бази не пусті - він додасть рецепти в Room, і Flow (пункт 1) спрацює знову.
+            CoroutineScope(Dispatchers.IO).launch {
+                findRecipesRelational(userIngredients)
+            }
         }
     }
 
+    private suspend fun findRecipesRelational(ingredientNames: List<String>) {
+        if (ingredientNames.isEmpty()) return
 
-    //Пошук рецептів за назвою інгредієнта (Локально + Віддалено)
+        try {
+            Log.d(TAG, " Шукаємо ID для інгредієнтів: $ingredientNames")
 
-    fun searchByIngredient(ingredients: List<String>): Flow<List<LocalRecipeEntity>> {
-        if (ingredients.isEmpty()) return flow { emit(emptyList()) }
+            // Знаходимо ID інгредієнтів (шукаємо нестрого через ilike)
+            val foundIngredientIds = mutableListOf<String>()
 
-        // Беремо ВСІ рецепти з локальної бази і фільтруємо прямо тут
-        return recipeDao.getAllRecieps().map { allRecipes ->
-            val filteredRecipes = mutableListOf<LocalRecipeEntity>()
+            // Supabase SDK не вміє робити "ilike any", тому проходимось циклом
+            // Це нормально, бо інгредієнтів зазвичай мало (3-5 штук)
+            ingredientNames.forEach { name ->
+                val dtos = supabase.from("ingredients")
+                    .select(columns = Columns.list("id, name")) {
+                        // ilike - ігнорує регістр (знайде "Молоко", "молоко", "МОЛОКО")
+                        filter { ilike("name", "%${name.trim()}%") }
+                    }.decodeList<IngredientNameDto>()
 
-            for (recipe in allRecipes) {
-                var matches = false
-                if (recipe.ingredientsText != null) {
-                    for (ing in ingredients) {
-                        if (recipe.ingredientsText.contains(ing, ignoreCase = true)) {
-                            matches = true
-                            break // знайшли хоча б один збіг, далі не перевіряємо
-                        }
-                    }
-                }
-
-                if (matches) {
-                    filteredRecipes.add(recipe)
-                }
+                foundIngredientIds.addAll(dtos.map { it.id })
             }
 
-            filteredRecipes
-            }.onStart {
-                findRecipesByIngredientsRemote(ingredients)
+            if (foundIngredientIds.isEmpty()) {
+                Log.d(TAG, "Інгредієнти в базі не знайдені. Перевір таблицю 'ingredients'.")
+                return
             }
+
+            Log.d(TAG, "Знайдено ID інгредієнтів: $foundIngredientIds")
+
+
+            val links = supabase.from("recipe_ingredients")
+                .select(columns = Columns.list("recipe_id, ingredient_id")) {
+                    filter { isIn("ingredient_id", foundIngredientIds) }
+                }.decodeList<RecipeIngredientDto>()
+
+            val recipeIds = links.map { it.recipeId }.distinct()
+
+            if (recipeIds.isEmpty()) {
+                Log.d(TAG, "Рецептів з такими інгредієнтами немає.")
+                return
+            }
+
+            Log.d(TAG, "Знайдено ID рецептів: $recipeIds")
+
+
+            // Завантажуємо самі рецепти
+            val recipes = supabase.from("recipes")
+                .select(columns = Columns.list("*")) {
+                    filter { isIn("id", recipeIds) }
+                }.decodeList<RecipeDto>()
+
+            Log.d(TAG, "Завантажено рецептів: ${recipes.size}")
+
+            // Зберігаємо в локальну БД
+            recipes.forEach { dto ->
+                val existing = recipeDao.getRecipeById(dto.id)
+                // якщо немає, або оновлюємо
+                val entity = dto.toEntity(
+                    isFavorite = existing?.isFavorite ?: false,
+                    isPreloaded = existing?.isPreloaded ?: false
+                )
+                recipeDao.insertRecipe(entity)
+            }
+
+        } catch (e: Exception) {
+            Log.e(TAG, "помилка реляційного пошуку", e)
+        }
     }
+
 
     @Serializable
     data class IngredientIdDto(val id: String)
@@ -160,7 +226,7 @@ class RecipeRepository( private val recipeDao: LocalRecipeDao)
                 }.decodeList<RecipeIdDto>()
 
 
-            // КРОК 2: Прибираємо дублікати
+            //  Прибираємо дублікати
             val uniqueRecipeIds = rawIds.map { it.recipe_id }.distinct()
 
             if (uniqueRecipeIds.isEmpty()) {
@@ -274,12 +340,12 @@ class RecipeRepository( private val recipeDao: LocalRecipeDao)
     //Завантажує дефолтні рецепти з файлу PreloadedRecipes у локальну базу.
     suspend fun loadDefaultRecipes(): Result<Unit> = withContext(Dispatchers.IO) {
         try {
-            // 1. Отримуємо список рецептів з нашого об'єкта
+            // Отримуємо список рецептів з нашого об'єкта
             val defaultRecipes = PreloadedRecipes.defaultRecipes
 
             Log.d(TAG, "Starting preload of ${defaultRecipes.size} recipes...")
 
-            // 2. Проходимось по списку і вставляємо в Room
+            // Проходимось по списку і вставляємо в Room
             defaultRecipes.forEach { recipe -> recipeDao.insertRecipe(recipe) }
 
             Log.d(TAG, "Successfully preloaded ${defaultRecipes.size} recipes")
@@ -295,11 +361,11 @@ class RecipeRepository( private val recipeDao: LocalRecipeDao)
     //Створити новий рецепт (спочатку локально, потім на Supabase)
     suspend fun createRecipe(recipe: LocalRecipeEntity): Result<LocalRecipeEntity> = withContext(Dispatchers.IO) {
         try {
-            // 1. Спочатку зберігаємо локально (для офлайн режиму)
+            // Спочатку зберігаємо локально (для офлайн режиму)
             recipeDao.insertRecipe(recipe)
             Log.d(TAG, "Recipe saved locally: ${recipe.id}")
 
-            // 2. Намагаємось відправити на Supabase
+            // Намагаємось відправити на Supabase
             try {
                 val dto = recipe.toDto()
                 val inserted = supabase.from("recipes")

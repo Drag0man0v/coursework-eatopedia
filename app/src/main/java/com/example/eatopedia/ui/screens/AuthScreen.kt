@@ -2,6 +2,8 @@ package com.example.eatopedia.ui.screens
 
 import android.widget.Toast
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -20,10 +22,9 @@ import com.example.eatopedia.R
 
 @Composable
 fun AuthScreen(
-    onLoginSuccess: () -> Unit, // Що робити, коли вхід успішний (навігація)
-    viewModel: AuthViewModel = hiltViewModel() // Hilt сам знайде ViewModel
+    onLoginSuccess: () -> Unit,
+    viewModel: AuthViewModel = hiltViewModel()
 ) {
-    // Підписуємось на стани з ViewModel
     val isSignUpMode by viewModel.isSignUpMode.collectAsState()
     val email by viewModel.email.collectAsState()
     val password by viewModel.password.collectAsState()
@@ -33,25 +34,29 @@ fun AuthScreen(
     val isAuthenticated by viewModel.isAuthenticated.collectAsState()
 
     val context = LocalContext.current
+    val scrollState = rememberScrollState()
 
-    // Слідкуємо за подіями (Успішний вхід або Помилка)
     LaunchedEffect(key1 = isAuthenticated, key2 = message) {
         if (message != null) {
             Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
             viewModel.clearMessage()
         }
         if (isAuthenticated) {
-            onLoginSuccess() // Переходимо на Головний екран
+            onLoginSuccess()
         }
     }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(24.dp),
+            .verticalScroll(scrollState)
+            .padding(24.dp)
+            .padding(bottom = 100.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+        verticalArrangement = Arrangement.Top
     ) {
+        Spacer(modifier = Modifier.height(120.dp))
+
         Text(
             text = if (isSignUpMode) "Створити акаунт" else "З поверненням!",
             color = colorResource(id = R.color.eatopedia_dark),
@@ -69,10 +74,11 @@ fun AuthScreen(
                 label = { Text("Ваше ім'я") },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
-                colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = colorResource(id = R.color.eatopedia_dark), // Рамка
-                focusedLabelColor = colorResource(id = R.color.eatopedia_dark),  // Текст "Ваше ім'я"
-                cursorColor = colorResource(id = R.color.eatopedia_dark)         // Мигаюча паличка
-            )
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = colorResource(id = R.color.eatopedia_dark),
+                    focusedLabelColor = colorResource(id = R.color.eatopedia_dark),
+                    cursorColor = colorResource(id = R.color.eatopedia_dark)
+                )
             )
             Spacer(modifier = Modifier.height(16.dp))
         }
@@ -85,9 +91,11 @@ fun AuthScreen(
             modifier = Modifier.fillMaxWidth(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
             singleLine = true,
-            colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = colorResource(id = R.color.eatopedia_dark), // Рамка
-            focusedLabelColor = colorResource(id = R.color.eatopedia_dark),  // Текст "Ваше ім'я"
-            cursorColor = colorResource(id = R.color.eatopedia_dark)   )      // Мигаюча паличка
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = colorResource(id = R.color.eatopedia_dark),
+                focusedLabelColor = colorResource(id = R.color.eatopedia_dark),
+                cursorColor = colorResource(id = R.color.eatopedia_dark)
+            )
         )
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -101,9 +109,11 @@ fun AuthScreen(
             visualTransformation = PasswordVisualTransformation(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
             singleLine = true,
-            colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = colorResource(id = R.color.eatopedia_dark), // Рамка
-                focusedLabelColor = colorResource(id = R.color.eatopedia_dark),  // Текст "Ваше ім'я"
-                cursorColor = colorResource(id = R.color.eatopedia_dark)  )       // Мигаюча паличка
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = colorResource(id = R.color.eatopedia_dark),
+                focusedLabelColor = colorResource(id = R.color.eatopedia_dark),
+                cursorColor = colorResource(id = R.color.eatopedia_dark)
+            )
         )
 
         Spacer(modifier = Modifier.height(24.dp))
@@ -115,13 +125,14 @@ fun AuthScreen(
                 .fillMaxWidth()
                 .height(50.dp),
             enabled = !isLoading,
-                    colors = ButtonDefaults.buttonColors(
-                    containerColor = colorResource(id = R.color.eatopedia_dark),
-            contentColor = androidx.compose.ui.graphics.Color.White)
+            colors = ButtonDefaults.buttonColors(
+                containerColor = colorResource(id = R.color.eatopedia_dark),
+                contentColor = androidx.compose.ui.graphics.Color.White
+            )
         ) {
             if (isLoading) {
                 CircularProgressIndicator(
-                    color = colorResource(id = R.color.eatopedia_dark),
+                    color = androidx.compose.ui.graphics.Color.White,
                     modifier = Modifier.size(24.dp)
                 )
             } else {

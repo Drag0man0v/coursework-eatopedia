@@ -35,11 +35,11 @@ abstract class AppDatabase: RoomDatabase()
                 val instance = Room.databaseBuilder(
                     context.applicationContext, // 1.Доступ до файлової системи телефону
                     AppDatabase::class.java,    // 2. Клас бази(генерує запити)
-                    "eatopedia_db"              // 3.  <-- Назва файлу, який буде лежати в пам'яті телефону
+                    "eatopedia_db"
                 ).fallbackToDestructiveMigration().build()
 
                 INSTANCE = instance
-                instance//повертає оцей обєкт
+                instance
             }
         }
     }

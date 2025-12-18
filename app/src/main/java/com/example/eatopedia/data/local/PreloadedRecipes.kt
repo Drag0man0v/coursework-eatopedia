@@ -2,20 +2,20 @@ package com.example.eatopedia.data.local
 
 object PreloadedRecipes {
 
-    // Твій ID з Supabase
     private const val ADMIN_ID = "c1b0cfd5-1235-4690-962f-4e8f4eb78e3b"
     private const val ADMIN_NAME = "dragoman0v"
 
+
     val defaultRecipes:  List<LocalRecipeEntity> = listOf(
-        // === УКРАЇНСЬКА КУХНЯ ===
+
         LocalRecipeEntity(
             id = "local_1",
             title = "Борщ український",
             description = "*Зваріть наваристий бульйон зі свинини та води протягом 1.5 години, знімаючи піну;*Почистіть картоплю, наріжте кубиками та додайте до бульйону;*Натріть буряк та моркву, цибулю наріжте дрібно;*Обсмажте овочі на олії, додайте томатну пасту та тушкуйте 5 хвилин;*Нашинкуйте капусту та додайте до каструлі разом із зажаркою;*Варіть ще 10 хвилин, додайте сіль, перець та часник;*Вимкніть вогонь і дайте настоятися 20 хвилин.",
-            imageUrl = null,
+            imageUrl = "android.resource://com.example.eatopedia/drawable/borsh",
             authorId = ADMIN_ID,
             authorName = ADMIN_NAME,
-            ingredientsText = "Свинина: 400 г, Буряк: 300 г, Картопля: 400 г, Капуста: 300 г, Морква: 100 г, Цибуля: 100 г, Томатна паста: 70 г, Вода: 2000 г",
+            ingredientsText = "Свинина: 400 г, Буряк: 300 г, Картопля: 400 г, Капуста: 300 г, Морква: 100 г, Цибуля: 100 г, Томатна паста: 70 г, Вода: 2 л",
             calories = 48.0,
             proteins = 3.2,
             fats = 2.8,
@@ -28,7 +28,7 @@ object PreloadedRecipes {
             id = "local_2",
             title = "Вареники з вишнею",
             description = "*Просійте борошно, додайте сіль та окріп, замісіть еластичне тісто;*Залиште тісто відпочити під плівкою на 20 хвилин;*Видаліть кісточки з вишень і дайте стекти соку;*Розкачайте тісто, виріжте кружечки;*Покладіть вишні та цукор на тісто, щільно заліпіть краї;*Варіть у киплячій воді 3 хвилини після спливання;*Подавайте гарячими з маслом.",
-            imageUrl = null,
+            imageUrl = "android.resource://com.example.eatopedia/drawable/varenuku",
             authorId = ADMIN_ID,
             authorName = ADMIN_NAME,
             ingredientsText = "Борошно пшеничне: 500 г, Вода: 250 г, Вишня: 400 г, Цукор: 100 г, Масло вершкове: 50 г",
@@ -89,7 +89,6 @@ object PreloadedRecipes {
             isPreloaded = true
         ),
 
-        // === ІТАЛІЯ ТА ЄВРОПА ===
         LocalRecipeEntity(
             id = "local_6",
             title = "Паста Карбонара",
@@ -171,7 +170,6 @@ object PreloadedRecipes {
             isPreloaded = true
         ),
 
-        // === СНІДАНКИ ===
         LocalRecipeEntity(
             id = "local_11",
             title = "Шакшука",
@@ -253,7 +251,6 @@ object PreloadedRecipes {
             isPreloaded = true
         ),
 
-        // === М'ЯСНІ СТРАВИ ===
         LocalRecipeEntity(
             id = "local_16",
             title = "Плов узбекський",
@@ -335,7 +332,7 @@ object PreloadedRecipes {
             isPreloaded = true
         ),
 
-        // === САЛАТИ ТА ЗАКУСКИ ===
+
         LocalRecipeEntity(
             id = "local_21",
             title = "Салат Цезар",
@@ -401,7 +398,7 @@ object PreloadedRecipes {
             isPreloaded = true
         ),
 
-        // === ДЕСЕРТИ ===
+
         LocalRecipeEntity(
             id = "local_25",
             title = "Тірамісу",

@@ -22,7 +22,6 @@ class FridgeRepository(private val fridgeDao: FridgeItemDao
     }
 
     //Додати продукт у холодильник
-
     suspend fun addProduct(name: String): Result<Unit> = withContext(Dispatchers.IO) {
         try {
             if (name.isBlank()) {

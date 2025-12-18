@@ -76,7 +76,9 @@ android {
 }
 
 dependencies {
-
+    implementation(libs.androidx.core.splashscreen)
+    implementation(libs.coil.compose)
+    implementation(libs.compose.material.icons.extended)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
@@ -106,7 +108,7 @@ dependencies {
     implementation(libs.supabase.functions)
     implementation(libs.supabase.auth)      // Логін/Реєстрація
     implementation(libs.supabase.storage)   // Картинки
-    // implementation(libs.supabase.realtime) //todo (Розкоментуй, якщо треба живі оновлення)
+    // implementation(libs.supabase.realtime) //todo (Розкоментуй старий, якщо треба живі оновлення)
 
     implementation(libs.ktor.client.android)
     implementation(libs.ktor.client.core)
@@ -118,7 +120,5 @@ dependencies {
     implementation(libs.hilt.android)
     kapt(libs.hilt.compiler)
     implementation(libs.androidx.hilt.navigation.compose)
-
-
 
 }

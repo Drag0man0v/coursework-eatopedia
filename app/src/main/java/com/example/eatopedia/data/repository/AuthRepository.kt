@@ -168,8 +168,6 @@ class AuthRepository {
         }
     }
 
-
-    //не робиться жодних мережевих запитів тому і suspend не треба
     fun isUserLoggedIn(): Boolean {
         return supabase.auth.currentUserOrNull() != null
     }

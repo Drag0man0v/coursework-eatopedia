@@ -4,27 +4,21 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.eatopedia.data.repository.AuthRepository
 import com.example.eatopedia.data.repository.RecipeRepository
-import dagger.hilt.android.lifecycle.HiltViewModel // Hilt
-import javax.inject.Inject // Hilt
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
-// ViewModel для екрану авторизації/реєстрації
 @HiltViewModel
 class AuthViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     private val recipeRepository: RecipeRepository
 ) : ViewModel() {
 
-    // ==========================================
-    // STATE для UI
-    // ==========================================
-
-    // Режим: true = Реєстрація, false = Вхід
+    // Стан UI
     private val _isSignUpMode = MutableStateFlow(true)
     val isSignUpMode: StateFlow<Boolean> = _isSignUpMode.asStateFlow()
 
-    // Поля введення
     private val _email = MutableStateFlow("")
     val email: StateFlow<String> = _email.asStateFlow()
 
@@ -34,36 +28,27 @@ class AuthViewModel @Inject constructor(
     private val _username = MutableStateFlow("")
     val username: StateFlow<String> = _username.asStateFlow()
 
-    // Чи йде завантаження (показуємо спінер на кнопці)
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
-    // Повідомлення/помилка для SnackBar
     private val _message = MutableStateFlow<String?>(null)
     val message: StateFlow<String?> = _message.asStateFlow()
 
-    // Чи користувач успішно залогінився (навігація на головний екран)
     private val _isAuthenticated = MutableStateFlow(false)
     val isAuthenticated: StateFlow<Boolean> = _isAuthenticated.asStateFlow()
 
     init {
-        // Перевіряємо чи користувач вже залогінений
         if (authRepository.isUserLoggedIn()) {
             _isAuthenticated.value = true
         }
     }
 
-    // ==========================================
-    // ACTIONS
-    // ==========================================
-
-    // Перемикач між Вхід/Реєстрація
+    // Дії користувача
     fun toggleMode() {
         _isSignUpMode.value = !_isSignUpMode.value
         clearFields()
     }
 
-    // Оновлення полів вводу
     fun onEmailChanged(value: String) {
         _email.value = value
     }
@@ -76,7 +61,6 @@ class AuthViewModel @Inject constructor(
         _username.value = value
     }
 
-    // Кнопка "Поїхали!" - виконує вхід або реєстрацію
     fun onSubmit() {
         if (_isSignUpMode.value) {
             signUp()
@@ -85,7 +69,6 @@ class AuthViewModel @Inject constructor(
         }
     }
 
-    // Реєстрація
     private fun signUp() {
         viewModelScope.launch {
             _isLoading.value = true
@@ -98,11 +81,8 @@ class AuthViewModel @Inject constructor(
             )
 
             result.onSuccess {
-                _message.value = "Лист надіслано! Підтвердіть пошту перед входом."
-
-                // Перемикаємо на екран входу, щоб він міг залогінитись після кліку в листі
+                _message.value = "Лист надіслано. Підтвердіть пошту перед входом."
                 _isSignUpMode.value = false
-
             }.onFailure { error ->
                 _message.value = error.message ?: "Помилка реєстрації"
             }
@@ -110,7 +90,6 @@ class AuthViewModel @Inject constructor(
         }
     }
 
-    // Вхід
     private fun signIn() {
         viewModelScope.launch {
             _isLoading.value = true
@@ -122,7 +101,7 @@ class AuthViewModel @Inject constructor(
             )
 
             result.onSuccess {
-                _message.value = "Вхід успішний!"
+                _message.value = "Вхід успішний"
                 _isAuthenticated.value = true
             }.onFailure { error ->
                 _message.value = error.message ?: "Невірний email або пароль"
@@ -132,7 +111,6 @@ class AuthViewModel @Inject constructor(
         }
     }
 
-    // Очистити поля
     private fun clearFields() {
         _email.value = ""
         _password.value = ""
@@ -140,7 +118,6 @@ class AuthViewModel @Inject constructor(
         _message.value = null
     }
 
-    // Очистити повідомлення
     fun clearMessage() {
         _message.value = null
     }

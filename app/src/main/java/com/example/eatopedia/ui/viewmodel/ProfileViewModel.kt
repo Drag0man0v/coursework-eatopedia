@@ -26,7 +26,7 @@ class ProfileViewModel @Inject constructor(
     private val _currentUser = MutableStateFlow<ProfileDto?>(null)
     val currentUser: StateFlow<ProfileDto?> = _currentUser.asStateFlow()
 
-    // Улюблені рецепти
+    // Улюблені рецепти (збережені)
     val favoriteRecipes: StateFlow<List<LocalRecipeEntity>> = recipeRepository
         .getFavoriteRecipes()
         .stateIn(
@@ -34,6 +34,10 @@ class ProfileViewModel @Inject constructor(
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = emptyList()
         )
+
+    // МОЇ рецепти (створені користувачем) - ДОДАНО!
+    private val _myRecipes = MutableStateFlow<List<LocalRecipeEntity>>(emptyList())
+    val myRecipes: StateFlow<List<LocalRecipeEntity>> = _myRecipes.asStateFlow()
 
     // Чи відкрито екран додавання рецепта
     private val _showAddRecipeScreen = MutableStateFlow(false)
@@ -49,6 +53,7 @@ class ProfileViewModel @Inject constructor(
 
     init {
         loadCurrentUser()
+        loadMyRecipes()
     }
 
     // ==========================================
@@ -61,6 +66,18 @@ class ProfileViewModel @Inject constructor(
             val result = authRepository.getCurrentUser()
             result.onSuccess { profile ->
                 _currentUser.value = profile
+            }
+        }
+    }
+
+    // Завантажити МОЇ рецепти (створені мною) - ДОДАНО!
+    private fun loadMyRecipes() {
+        viewModelScope.launch {
+            val userId = authRepository.getCurrentUserId()
+
+            // Отримуємо всі рецепти і фільтруємо по authorId
+            recipeRepository.getAllRecipes().collect { allRecipes ->
+                _myRecipes.value = allRecipes.filter { it.authorId == userId }
             }
         }
     }
@@ -99,4 +116,5 @@ class ProfileViewModel @Inject constructor(
     fun clearMessage() {
         _message.value = null
     }
+
 }

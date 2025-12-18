@@ -8,5 +8,6 @@
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
     <color name="splash_background">#92e394</color>
+    <color name="splash_background2">#84A484</color>
     <color name="eatopedia_dark">#295d2a</color>
 </resources>
